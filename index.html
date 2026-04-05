@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketScope — Smart Price Comparison</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14; --surface: #13161d; --surface2: #1a1e28; --border: #252a38;
+      --accent: #00e5a0; --accent2: #00b4d8; --warn: #ffb703; --danger: #ef233c;
+      --text: #e8ecf4; --muted: #6b7a99;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; padding: 2rem 1.5rem 4rem; }
+    body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+    .container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* HEADER */
+    .header { display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); }
+    .logo { display:flex; align-items:center; gap:14px; }
+    .logo-icon { width:46px; height:46px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; box-shadow:0 0 20px rgba(0,229,160,0.25); }
+    h1 { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; color:#fff; letter-spacing:-0.5px; }
+    h1 span { color:var(--accent); }
+    .tagline { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+
+    /* API KEY BANNER */
+    .api-banner { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1rem 1.25rem; margin-bottom:12px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+    .api-banner.saved { border-color:rgba(0,229,160,0.3); }
+    .api-status { font-size:12px; margin-top:5px; }
+    .api-status.ok  { color:var(--accent); }
+    .api-status.err { color:var(--danger); }
+
+    /* CARDS */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1rem 1.25rem; margin-bottom:12px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    label { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+    input, select { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:10px; font-size:14px; font-family:'DM Sans',sans-serif; outline:none; width:100%; transition:0.2s; }
+    input:focus, select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,229,160,0.1); }
+    input[type=password] { letter-spacing:2px; }
+    select option { background:#1a1e28; }
+    .f3 { flex:3; min-width:180px; }
+    .f2 { flex:2; min-width:140px; }
+    .f1 { flex:1; min-width:110px; }
+
+    /* BUTTONS */
+    .btn { border-radius:10px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Syne',sans-serif; transition:0.2s; border:none; }
+    .btn:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-1px); }
+    .btn:disabled { opacity:0.45; cursor:not-allowed; transform:none !important; }
+    .btn-green { background:linear-gradient(135deg,var(--accent),#00c07c); color:#0d1a14; }
+    .btn-blue  { background:rgba(0,180,216,0.15); color:var(--accent2); border:1px solid rgba(0,180,216,0.3); }
+    .btn-amber { background:rgba(255,183,3,0.15); color:var(--warn); border:1px solid rgba(255,183,3,0.3); }
+    .btn-sm    { padding:8px 16px; font-size:13px; }
+
+    /* LOCAL PANEL */
+    .panel-lbl { font-size:13px; font-weight:600; color:var(--warn); margin-bottom:10px; }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .chip { background:rgba(255,183,3,0.1); border:1px solid rgba(255,183,3,0.25); border-radius:20px; padding:4px 10px; font-size:12px; color:var(--warn); display:flex; align-items:center; gap:6px; }
+    .chip button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; }
+    .chip button:hover { color:var(--danger); }
+
+    /* SUMMARY */
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-bottom:12px; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 14px; }
+    .sl { font-size:11px; color:var(--muted); margin-bottom:4px; }
+    .sv { font-size:20px; font-weight:700; font-family:'Syne',sans-serif; color:var(--text); }
+    .sv.g { color:var(--accent); } .sv.r { color:var(--danger); } .sv.a { color:var(--warn); }
+    .ss { font-size:11px; color:var(--muted); margin-top:2px; }
+
+    /* INSIGHT */
+    .insight { background:rgba(0,180,216,0.07); border:1px solid rgba(0,180,216,0.2); border-radius:12px; padding:10px 14px; font-size:13px; color:#9dd4e8; line-height:1.7; margin-bottom:12px; }
+    .insight b { color:var(--accent2); }
+
+    /* TABLE */
+    .tbl-outer { overflow-x:auto; background:var(--surface); border-radius:16px; border:1px solid var(--border); }
+    table { width:100%; border-collapse:collapse; min-width:540px; }
+    thead th { background:var(--surface2); padding:10px 14px; text-align:left; font-size:11px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:0.5px; }
+    tbody td { padding:10px 14px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:rgba(255,255,255,0.02); }
+    .best-row td { background:rgba(0,229,160,0.05) !important; }
+    .badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+    .b-on { background:rgba(0,229,160,0.12); color:var(--accent); }
+    .b-lo { background:rgba(255,183,3,0.12); color:var(--warn); }
+    .b-wh { background:rgba(0,180,216,0.12); color:var(--accent2); }
+    .b-sh { background:rgba(255,255,255,0.06); color:var(--muted); border:1px solid var(--border); }
+    .price-best { color:var(--accent); font-weight:700; }
+    .price-high  { color:var(--danger); }
+
+    /* SORT */
+    .sort-row { display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+    .sb { background:none; border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; transition:0.2s; }
+    .sb.on { border-color:rgba(0,229,160,0.4); color:var(--accent); background:rgba(0,229,160,0.08); }
+
+    /* LOADING / EMPTY */
+    .state-box { text-align:center; padding:3rem 1rem; color:var(--muted); font-size:14px; line-height:1.8; }
+    .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-msg { font-size:13px; color:var(--muted); margin-top:6px; }
+
+    /* ERROR */
+    .err-box { background:rgba(239,35,60,0.08); border:1px solid rgba(239,35,60,0.25); border-radius:12px; padding:12px 16px; font-size:13px; color:#f87272; margin-bottom:12px; line-height:1.6; }
+
+    @media(max-width:640px){ body{padding:1rem 1rem 3rem;} h1{font-size:1.4rem;} .row{flex-direction:column;} .btn-green{width:100%;justify-content:center;} }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🛒</div>
+      <div>
+        <h1>Market<span>Scope</span></h1>
+        <div class="tagline">AI-Powered · Store-Wise Price Comparison · India</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);">Powered by Claude AI</div>
+  </div>
+
+  <!-- API KEY -->
+  <div class="api-banner" id="apiBanner">
+    <div class="f3">
+      <label>🔑 Anthropic API Key</label>
+      <input type="password" id="apiKeyIn" placeholder="sk-ant-api03-..." autocomplete="off">
+    </div>
+    <div>
+      <button class="btn btn-blue btn-sm" onclick="saveKey()">Save Key</button>
+    </div>
+    <div>
+      <button class="btn btn-amber btn-sm" onclick="clearKey()" id="clearBtn" style="display:none;">Clear</button>
+    </div>
+    <div style="width:100%;">
+      <div class="api-status" id="apiStatus">Enter your Anthropic API key. It is saved only in your browser (localStorage) and never sent anywhere except directly to api.anthropic.com.</div>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="card">
+    <div class="row">
+      <div class="f2">
+        <label>Product Name</label>
+        <input type="text" id="prodIn" placeholder="e.g., Cashew Nuts, Wireless Mouse, Basmati Rice...">
+      </div>
+      <div class="f1">
+        <label>Quantity / Pack</label>
+        <input type="text" id="qtyIn" placeholder="e.g., 1 kg, 2 pcs">
+      </div>
+      <div class="f1">
+        <label>Category</label>
+        <select id="catIn">
+          <option value="">All Categories</option>
+          <option>Grocery & Food</option>
+          <option>Electronics</option>
+          <option>Clothing & Fashion</option>
+          <option>Home & Kitchen</option>
+          <option>Health & Beauty</option>
+          <option>Sports & Outdoors</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn btn-green" id="searchBtn" onclick="runSearch()">🔍 Compare Prices</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCAL MARKET -->
+  <div class="card">
+    <div class="panel-lbl">🏪 Add Local Market / Nearby Store Price</div>
+    <div class="row">
+      <div class="f1"><label>Store Name</label><input type="text" id="lStore" placeholder="e.g., Manek Chowk"></div>
+      <div class="f1"><label>Trader / Seller</label><input type="text" id="lTrader" placeholder="e.g., Ramji Kaju"></div>
+      <div class="f1"><label>Price (₹)</label><input type="number" id="lPrice" placeholder="780" min="0" step="0.01"></div>
+      <div class="f1"><label>Pack Size</label><input type="text" id="lPack" placeholder="1 kg"></div>
+      <div><button class="btn btn-amber" onclick="addLocal()">+ Add</button></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="err-box" id="errBox" style="display:none;"></div>
+
+  <!-- SUMMARY -->
+  <div id="summaryArea" style="display:none;"></div>
+
+  <!-- INSIGHT -->
+  <div id="insightArea" style="display:none;"></div>
+
+  <!-- SORT ROW -->
+  <div class="sort-row" id="sortRow" style="display:none;">
+    <span style="font-size:12px;color:var(--muted);">Sort by:</span>
+    <button class="sb on" id="sP" onclick="doSort('price')">💰 Price</button>
+    <button class="sb" id="sS" onclick="doSort('store')">🏬 Store</button>
+    <button class="sb" id="sT" onclick="doSort('type')">📂 Type</button>
+  </div>
+
+  <!-- TABLE -->
+  <div id="tblArea">
+    <div class="state-box">
+      <div style="font-size:2.5rem;margin-bottom:10px;">🔍</div>
+      Enter a product name and click <b style="color:var(--accent);">Compare Prices</b> to get started.<br>
+      <span style="font-size:12px;">Make sure your API key is saved above first.</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let allResults = [];
+  let currentSort = 'price';
+  const locals = [];
+  let lastProd = '';
+
+  // ── API KEY ──
+  function saveKey() {
+    const key = document.getElementById('apiKeyIn').value.trim();
+    if (!key.startsWith('sk-ant-')) {
+      setApiStatus('Invalid key format. Should start with sk-ant-...', false);
+      return;
+    }
+    localStorage.setItem('ms_api_key', key);
+    document.getElementById('apiKeyIn').value = '';
+    document.getElementById('clearBtn').style.display = 'inline-flex';
+    document.getElementById('apiBanner').classList.add('saved');
+    setApiStatus('✓ API key saved! You can now search.', true);
+  }
+
+  function clearKey() {
+    localStorage.removeItem('ms_api_key');
+    document.getElementById('clearBtn').style.display = 'none';
+    document.getElementById('apiBanner').classList.remove('saved');
+    setApiStatus('API key cleared.', false);
+  }
+
+  function getKey() { return localStorage.getItem('ms_api_key') || ''; }
+
+  function setApiStatus(msg, ok) {
+    const el = document.getElementById('apiStatus');
+    el.textContent = msg;
+    el.className = 'api-status ' + (ok ? 'ok' : 'err');
+  }
+
+  // Init on load
+  window.addEventListener('DOMContentLoaded', () => {
+    if (getKey()) {
+      document.getElementById('clearBtn').style.display = 'inline-flex';
+      document.getElementById('apiBanner').classList.add('saved');
+      setApiStatus('✓ API key loaded from storage. Ready to search!', true);
+    }
+    document.getElementById('prodIn').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+  });
+
+  // ── SEARCH ──
+  async function runSearch() {
+    const key  = getKey();
+    const prod = document.getElementById('prodIn').value.trim();
+    const qty  = document.getElementById('qtyIn').value.trim();
+    const cat  = document.getElementById('catIn').value;
+
+    if (!key) { showErr('Please enter and save your Anthropic API key first.'); return; }
+    if (!prod) { alert('Please enter a product name.'); return; }
+
+    lastProd = prod;
+    setLoading(true);
+    hideErr();
+
+    try {
+      const [rows, insight] = await Promise.all([
+        fetchPrices(key, prod, qty, cat),
+        fetchInsight(key, prod, qty, cat)
+      ]);
+
+      allResults = [
+        ...rows.map(r => ({...r, productName: prod})),
+        ...locals.map(e => ({productName:prod, storeName:e.storeName, trader:e.trader, sourceType:'Local Market', packSize:e.packSize, price:e.price, currency:'₹', productUrl:null}))
+      ];
+
+      renderSummary(allResults);
+      if (insight) {
+        document.getElementById('insightArea').style.display = 'block';
+        document.getElementById('insightArea').innerHTML = `<div class="insight"><b>💡 Buying tip:</b> ${esc(insight)}</div>`;
+      }
+      document.getElementById('sortRow').style.display = 'flex';
+      renderTable(allResults);
+
+    } catch (e) {
+      showErr(e.message);
+      document.getElementById('tblArea').innerHTML = '';
+    }
+
+    setLoading(false);
+  }
+
+  async function fetchPrices(key, prod, qty, cat) {
+    const prompt = `Search for current prices of "${prod}"${qty?` (${qty})`:''}${cat?`, category: ${cat}`:''} from Indian online and offline stores.
+
+Return ONLY a raw JSON array — no markdown, no explanation, no backticks. Each object must have exactly:
+{ "storeName": string, "trader": string, "sourceType": "Online Retail" or "Wholesale" or "Shop" or "Local Market", "packSize": string, "price": number, "currency": "₹", "productUrl": string or null }
+
+Include 8-10 stores: Amazon, Flipkart, BigBasket, Blinkit, JioMart, Zepto, DMart Ready, Reliance Fresh, and a wholesale/mandi option. Use realistic current Indian prices.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.error?.message || `API error ${res.status}`;
+      if (res.status === 401) throw new Error('Invalid API key. Please check and re-enter your key.');
+      if (res.status === 429) throw new Error('Rate limit hit. Please wait a moment and try again.');
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const text = (data.content || []).map(b => b.type === 'text' ? b.text : '').join('\n');
+    const m = text.match(/\[[\s\S]*\]/);
+    if (!m) throw new Error('Could not parse price data. Please try again.');
+    const parsed = JSON.parse(m[0]);
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('No price data returned.');
+    return parsed;
+  }
+
+  async function fetchInsight(key, prod, qty, cat) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: `Give a 2-sentence practical buying tip for "${prod}"${qty?` (${qty})`:''}${cat?`, ${cat}`:''} in India. Best store type, typical price range, one saving tip. Plain text only, no formatting.` }]
+        })
+      });
+      const d = await res.json();
+      return d.content?.[0]?.text?.trim() || '';
+    } catch { return ''; }
+  }
+
+  // ── LOCAL MARKET ──
+  function addLocal() {
+    const store  = document.getElementById('lStore').value.trim();
+    const trader = document.getElementById('lTrader').value.trim();
+    const price  = parseFloat(document.getElementById('lPrice').value);
+    const pack   = document.getElementById('lPack').value.trim();
+    if (!store || isNaN(price)) { alert('Enter at least a store name and price.'); return; }
+    locals.push({ storeName:store, trader:trader||store, price, packSize:pack||'—', sourceType:'Local Market', currency:'₹', productUrl:null });
+    renderChips();
+    ['lStore','lTrader','lPrice','lPack'].forEach(id => document.getElementById(id).value = '');
+    if (allResults.length) {
+      allResults.push({ productName:lastProd, ...locals[locals.length-1] });
+      renderSummary(allResults); doSort(currentSort);
+    }
+  }
+
+  function renderChips() {
+    document.getElementById('chips').innerHTML = locals.map((e,i) =>
+      `<div class="chip">🏪 <b>${esc(e.storeName)}</b> — ₹${e.price.toFixed(2)} (${esc(e.packSize)}) <button onclick="removeLocal(${i})">✕</button></div>`
+    ).join('');
+  }
+
+  function removeLocal(i) {
+    locals.splice(i, 1); renderChips();
+    allResults = allResults.filter(r => r.sourceType !== 'Local Market' || locals.some(l => l.storeName === r.storeName));
+    if (allResults.length) { renderSummary(allResults); renderTable(allResults); }
+  }
+
+  // ── SUMMARY ──
+  function renderSummary(results) {
+    if (!results.length) return;
+    const prices = results.map(r => r.price);
+    const mn = Math.min(...prices), mx = Math.max(...prices), av = prices.reduce((a,b)=>a+b)/prices.length;
+    const best = results.find(r => r.price === mn);
+    const fmt = v => v.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('summaryArea').style.display = 'block';
+    document.getElementById('summaryArea').innerHTML = `<div class="stat-grid">
+      <div class="stat"><div class="sl">Best Price</div><div class="sv g">₹${fmt(mn)}</div><div class="ss">${esc(best?.storeName||'')}</div></div>
+      <div class="stat"><div class="sl">Avg Price</div><div class="sv">₹${fmt(av)}</div><div class="ss">${results.length} stores</div></div>
+      <div class="stat"><div class="sl">Max Price</div><div class="sv r">₹${fmt(mx)}</div><div class="ss">Most expensive</div></div>
+      <div class="stat"><div class="sl">Max Saving</div><div class="sv a">₹${fmt(mx-mn)}</div><div class="ss">Best vs worst</div></div>
+      <div class="stat"><div class="sl">Stores Compared</div><div class="sv">${results.length}</div><div class="ss">Online + local</div></div>
+    </div>`;
+  }
+
+  // ── SORT ──
+  function doSort(by) {
+    currentSort = by;
+    ['sP','sS','sT'].forEach(id => document.getElementById(id).classList.remove('on'));
+    document.getElementById({price:'sP', store:'sS', type:'sT'}[by]).classList.add('on');
+    const s = [...allResults].sort((a,b) => by==='price' ? a.price-b.price : by==='store' ? a.storeName.localeCompare(b.storeName) : a.sourceType.localeCompare(b.sourceType));
+    renderTable(s);
+  }
+
+  // ── TABLE ──
+  function renderTable(results) {
+    if (!results.length) { document.getElementById('tblArea').innerHTML = `<div class="state-box">No results found.</div>`; return; }
+    const mn = Math.min(...results.map(r => r.price));
+    const tc = {'Online Retail':'b-on','Local Market':'b-lo','Wholesale':'b-wh','Shop':'b-sh'};
+    const fmt = v => Number(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const rows = results.map((r,i) => {
+      const isBest = r.price === mn;
+      const pct = isBest ? '✓ Best price' : `−${((r.price-mn)/r.price*100).toFixed(0)}% vs best`;
+      const pcl = isBest ? 'price-best' : r.price > mn*1.2 ? 'price-high' : '';
+      const lnk = r.productUrl
+        ? `<a href="${esc(r.productUrl)}" target="_blank" style="color:var(--accent2);font-size:12px;">View ↗</a>`
+        : `<span style="font-size:12px;color:var(--muted);">—</span>`;
+      return `<tr class="${isBest?'best-row':''}">
+        <td style="font-size:12px;color:var(--muted);">${isBest?'🏆':'#'+(i+1)}</td>
+        <td><span style="font-weight:600;">${esc(r.storeName)}</span><br><span style="font-size:11px;color:var(--muted);">${esc(r.trader||'')}</span></td>
+        <td><span class="badge ${tc[r.sourceType]||'b-sh'}">${esc(r.sourceType)}</span></td>
+        <td style="font-size:12px;color:var(--muted);">${esc(r.packSize||'—')}</td>
+        <td class="${pcl}">₹${fmt(r.price)}</td>
+        <td style="font-size:11px;color:${isBest?'var(--accent)':'var(--muted)'};">${pct}</td>
+        <td>${lnk}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('tblArea').innerHTML = `<div class="tbl-outer"><table>
+      <thead><tr><th>Rank</th><th>Store / Seller</th><th>Type</th><th>Pack</th><th>Price</th><th>vs Best</th><th>Link</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  }
+
+  // ── UI HELPERS ──
+  function setLoading(on) {
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = on;
+    btn.textContent = on ? '⏳ Searching…' : '🔍 Compare Prices';
+    if (on) {
+      document.getElementById('summaryArea').style.display = 'none';
+      document.getElementById('insightArea').style.display = 'none';
+      document.getElementById('sortRow').style.display = 'none';
+      document.getElementById('tblArea').innerHTML = `<div class="state-box"><div class="spinner"></div><div>Searching stores & comparing prices…</div><div class="loading-msg">This may take 10–20 seconds</div></div>`;
+    }
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('errBox');
+    el.style.display = 'block';
+    el.innerHTML = `⚠️ <b>Error:</b> ${esc(msg)}`;
+  }
+
+  function hideErr() { document.getElementById('errBox').style.display = 'none'; }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>
